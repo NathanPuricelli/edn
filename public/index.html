@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Affectations Internes en Médecine (EDN / ECN 2017–2026) — CHU & Spécialités</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-badge">EDN / ECN</div>
+        <div>
+          <h1>Affectations des Internes en Médecine en France</h1>
+          <p class="subtitle">Effectifs, rangs limites et listes nominatives par CHU et par spécialité (2017–2026)</p>
+        </div>
+      </div>
+      <div class="year-selector-wrap">
+        <span class="year-label">Promotion :</span>
+        <div id="yearPills" class="year-pills" role="tablist" aria-label="Sélection de l'année"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- KPI Summary Strip -->
+    <section class="kpi-grid" id="kpiStrip">
+      <div class="kpi-card">
+        <span class="kpi-label">Année sélectionnée</span>
+        <strong class="kpi-value accent" id="kpiYear">2026</strong>
+        <span class="kpi-sub" id="kpiYearSub">Journal Officiel</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Internes affichés</span>
+        <strong class="kpi-value" id="kpiInternsCount">—</strong>
+        <span class="kpi-sub" id="kpiInternsTotal">sur — au total</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Couples CHU × Spécialité</span>
+        <strong class="kpi-value" id="kpiCellsCount">—</strong>
+        <span class="kpi-sub" id="kpiChusSpecsCount">28 CHU · 44 spécialités</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Premier rang (Min)</span>
+        <strong class="kpi-value success" id="kpiMinRank">—</strong>
+        <span class="kpi-sub">Meilleur rang de la sélection</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Rang limite (Max)</span>
+        <strong class="kpi-value warning" id="kpiLimitRank">—</strong>
+        <span class="kpi-sub">Dernier rang appelé de la sélection</span>
+      </div>
+    </section>
+
+    <!-- Filter & Search Controls -->
+    <section class="controls-panel">
+      <div class="controls-row">
+        <div class="control-group">
+          <label for="chuSelect">CHU (Ville / Hôpital)</label>
+          <select id="chuSelect">
+            <option value="">Tous les CHU (28)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="specialtySelect">Spécialité (DES)</label>
+          <select id="specialtySelect">
+            <option value="">Toutes les spécialités (44)</option>
+          </select>
+        </div>
+
+        <div class="control-group search-group" id="searchGroup">
+          <label for="searchInput">Rechercher un interne par nom / prénom</label>
+          <div class="search-input-wrap">
+            <input
+              type="search"
+              id="searchInput"
+              placeholder="Ex : Gay Vincent, Pichot, Marx..."
+              autocomplete="off"
+            />
+            <button type="button" id="clearSearchBtn" class="btn-icon" title="Effacer la recherche" hidden>✕</button>
+          </div>
+          <div id="searchResultsDropdown" class="search-results-dropdown" hidden></div>
+        </div>
+
+        <div class="control-group">
+          <label for="sortSelect">Trier par</label>
+          <select id="sortSelect">
+            <option value="chu_asc">CHU (A → Z) puis Spécialité</option>
+            <option value="spec_asc">Spécialité (A → Z) puis CHU</option>
+            <option value="limit_asc">Rang limite croissant (plus sélectif)</option>
+            <option value="limit_desc">Rang limite décroissant</option>
+            <option value="count_desc">Effectif décroissant (nb d'internes)</option>
+            <option value="count_asc">Effectif croissant</option>
+            <option value="min_asc">Premier rang croissant</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="controls-bottom">
+        <div class="view-tabs" role="tablist">
+          <button type="button" class="view-tab active" data-view="cards">
+            📋 Par CHU &amp; Spécialité (Détails &amp; Internes)
+          </button>
+          <button type="button" class="view-tab" data-view="matrix">
+            🔢 Matrice CHU × Spécialité (Rangs limites &amp; Effectifs)
+          </button>
+          <button type="button" class="view-tab" data-view="by_chu">
+            🏥 Synthèse par CHU
+          </button>
+          <button type="button" class="view-tab" data-view="directory">
+            🎓 Annuaire Nominatif des Internes
+          </button>
+        </div>
+
+        <div class="controls-actions">
+          <button type="button" id="resetFiltersBtn" class="btn-secondary">
+            Réinitialiser les filtres
+          </button>
+          <button type="button" id="exportCsvBtn" class="btn-secondary" title="Exporter la sélection en CSV">
+            ⬇ Exporter CSV
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- View 1: Cards per (CHU, Specialty) -->
+    <section id="viewCards" class="view-section active">
+      <div class="section-toolbar">
+        <div id="cardsStatusText" class="status-text">Chargement des affectations...</div>
+        <div class="toolbar-right">
+          <label class="checkbox-toggle">
+            <input type="checkbox" id="showAllInternsToggle" checked />
+            <span>Afficher la liste intégrale des internes sur chaque carte</span>
+          </label>
+        </div>
+      </div>
+      <div id="cardsGrid" class="cards-grid"></div>
+      <div id="cardsPagination" class="pagination-bar"></div>
+    </section>
+
+    <!-- View 2: 2D Matrix CHU x Specialty -->
+    <section id="viewMatrix" class="view-section" hidden>
+      <div class="section-toolbar">
+        <div class="status-text">
+          <strong>Matrice complète CHU × Spécialité :</strong> chaque cellule affiche le <strong>Rang Limite</strong> (en gras) et le <strong>nombre d'internes</strong> entre parenthèses. Cliquez sur une cellule pour voir les internes affectés.
+        </div>
+        <div class="toolbar-right">
+          <button type="button" id="transposeMatrixBtn" class="btn-secondary">
+            ⇄ Transposer Lignes / Colonnes
+          </button>
+        </div>
+      </div>
+      <div class="matrix-wrapper" id="matrixContainer"></div>
+    </section>
+
+    <!-- View 3: Synthesis by CHU -->
+    <section id="viewByChu" class="view-section" hidden>
+      <div class="section-toolbar">
+        <div class="status-text">
+          Récapitulatif par Centre Hospitalier Universitaire (CHU) : nombre total d'internes, spécialités représentées, rang limite et liste des internes.
+        </div>
+      </div>
+      <div id="byChuContainer" class="by-chu-list"></div>
+    </section>
+
+    <!-- View 4: Intern Directory -->
+    <section id="viewDirectory" class="view-section" hidden>
+      <div class="section-toolbar">
+        <div id="directoryStatusText" class="status-text"></div>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table" id="directoryTable">
+          <thead>
+            <tr>
+              <th>Rang</th>
+              <th>Civilité</th>
+              <th>Nom</th>
+              <th>Prénoms</th>
+              <th>CHU</th>
+              <th>Spécialité</th>
+              <th>Place dans le poste</th>
+              <th>Rang limite du poste</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="directoryTableBody"></tbody>
+        </table>
+      </div>
+      <div id="directoryPagination" class="pagination-bar"></div>
+    </section>
+  </main>
+
+  <!-- Modal for Detailed Cell Inspection & 2017-2026 Historical Evolution -->
+  <div id="cellModal" class="modal-backdrop" hidden>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <div>
+          <div class="modal-badges">
+            <span class="badge badge-chu" id="modalChuBadge">CHU</span>
+            <span class="badge badge-year" id="modalYearBadge">2026</span>
+          </div>
+          <h2 id="modalTitle">Spécialité</h2>
+        </div>
+        <button type="button" id="closeModalBtn" class="btn-close" aria-label="Fermer">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-kpis">
+          <div class="mini-kpi">
+            <span>Nombre d'internes</span>
+            <strong id="modalCount">—</strong>
+          </div>
+          <div class="mini-kpi highlight-warning">
+            <span>Rang limite (dernier pris)</span>
+            <strong id="modalLimitRank">—</strong>
+          </div>
+          <div class="mini-kpi">
+            <span>Premier rang (1er pris)</span>
+            <strong id="modalMinRank">—</strong>
+          </div>
+          <div class="mini-kpi">
+            <span>Rang médian</span>
+            <strong id="modalMedianRank">—</strong>
+          </div>
+        </div>
+
+        <div class="modal-columns">
+          <div class="modal-col-interns">
+            <h3>Personnes affectées dans ce CHU et cette spécialité</h3>
+            <div class="table-responsive modal-table-wrap">
+              <table class="data-table compact">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Rang</th>
+                    <th>Civilité</th>
+                    <th>Nom &amp; Prénoms</th>
+                  </tr>
+                </thead>
+                <tbody id="modalInternsBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="modal-col-history">
+            <h3>Historique 2017–2026 (Effectif &amp; Rang limite)</h3>
+            <div id="modalHistoryChart" class="history-chart"></div>
+            <div class="table-responsive">
+              <table class="data-table compact">
+                <thead>
+                  <tr>
+                    <th>Année</th>
+                    <th>Effectif</th>
+                    <th>1er Rang</th>
+                    <th>Rang Médian</th>
+                    <th>Rang Limite</th>
+                  </tr>
+                </thead>
+                <tbody id="modalHistoryBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

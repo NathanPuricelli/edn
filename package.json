@@ -1,0 +1,10 @@
+{
+  "name": "edn-affectations-webapp",
+  "version": "1.0.0",
+  "description": "Statistiques et affectations des internes en médecine en France par CHU et par spécialité (2017–2026)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "parse": "python3 parse_pdf.py 2026.pdf 2026.json"
+  }
+}

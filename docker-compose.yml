@@ -1,0 +1,10 @@
+services:
+  edn-webapp:
+    image: nginx:alpine
+    container_name: edn-webapp
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:80"
+    volumes:
+      - ./public:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
